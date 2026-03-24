@@ -1,0 +1,11 @@
+[2026-03-03 17:37:29.023] [MAIN] Session starting. intensity=5 attack=logic style=interrogative mode=simulation
+[2026-03-03 17:37:29.600] [MAIN] Simulation backend
+[2026-03-03 17:37:37.377] [MAIN] Session loop running.
+[2026-03-03 17:37:53.591] [MAIN] User turn ended. Moving to THINKING.
+[2026-03-03 17:37:53.692] [MAIN] User turn captured (13 words): Hello, my name is To- I am a lab engineer. How are you?
+[2026-03-03 17:37:55.360] [MAIN] Robot response: Lab engineer? What, like you mix chemicals or just push buttons? How's that make
+[2026-03-03 17:38:28.354] [MAIN] User turn ended. Moving to THINKING.
+[2026-03-03 17:38:28.455] [MAIN] User turn captured (19 words): My big point. I don't have a big point I'm Coding and helping Lab students, what
+[2026-03-03 17:38:30.392] [MAIN] Robot response: No big point? Then why waste my time introducing yourself like some lab rat? Cod
+[2026-03-03 17:38:53.923] [MAIN] Session ended via control command.
+[2026-03-03 17:38:53.923] [MAIN] Session ended.

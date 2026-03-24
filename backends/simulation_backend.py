@@ -14,12 +14,14 @@ class SimulationNao(NaoInterface):
     def speak(self, text):
         """
         Speak the given text using the PC speakers via pyttsx3.
+        Returns True on success, False on error.
         """
         if not text:
-            return
+            return True
 
         print("[SIMULATION] Robot says:", text)
         synthesize_and_play(text)
+        return True
 
     def listen(self):
         """

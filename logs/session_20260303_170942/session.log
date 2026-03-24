@@ -1,0 +1,5 @@
+[2026-03-03 17:09:42.132] [MAIN] Session starting. intensity=5 attack=logic style=interrogative mode=simulation
+[2026-03-03 17:09:43.299] [MAIN] Simulation backend
+[2026-03-03 17:09:55.705] [MAIN] Session loop running.
+[2026-03-03 17:10:03.071] [MAIN] Session ended via control command.
+[2026-03-03 17:10:03.073] [MAIN] Session ended.

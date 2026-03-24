@@ -1,0 +1,8 @@
+[2026-03-03 17:30:03.189] [MAIN] Session starting. intensity=5 attack=logic style=interrogative mode=simulation
+[2026-03-03 17:30:03.954] [MAIN] Simulation backend
+[2026-03-03 17:30:36.307] [MAIN] Session loop running.
+[2026-03-03 17:30:46.986] [MAIN] User turn ended. Moving to THINKING.
+[2026-03-03 17:30:47.089] [MAIN] User turn captured (11 words): Hello, my name is Tomo, how was it? and lab engineer
+[2026-03-03 17:30:48.811] [MAIN] Robot response: What the hell does "how was it? and lab engineer" even mean, Tomo? You introduci
+[2026-03-03 17:31:07.733] [MAIN] Session ended via control command.
+[2026-03-03 17:31:07.734] [MAIN] Session ended.

@@ -1,319 +1,233 @@
-# NAO LLM Conversation System
+# RoastCrowd
 
-This project is a proof-of-concept (POC) system that connects a NAO humanoid robot (or a Webots simulation of NAO) to a Large Language Model (LLM).
-It enables fully spoken conversations via:
-
-* Automatic Speech Recognition (ASR) using OpenAI Whisper API
-* LLM responses (via an external model, e.g. Grok, called through HTTP)
-* Text-to-Speech (TTS) back to the robot or PC speakers
-* A simple control layer and optional Web UI
-
-Current focus: simulation mode with Webots + NAO model.
-Real-robot integration (physical NAO over NAOqi) will be documented later.
-
----
-
-## High-Level Architecture
-
-The system consists of three main layers:
-
-1. Backend (Python)
-
-   * Manages the conversation loop (`conversation_loop.py`)
-   * Talks to:
-
-     * Whisper API (speech-to-text)
-     * LLM API (text-to-text)
-     * TTS engine (text-to-speech)
-   * Exposes a small control server (`control_server.py`) that the Webots controller (`nao_talk`) can call to trigger listening / speaking cycles
-   * Maintains a simple state file (`robot_state.txt`) for “idle / listening / thinking / speaking”
-
-2. Webots Simulation (NAO + `nao_talk` controller)
-
-   * Webots world (e.g. `nao_demo`) contains a NAO robot
-   * The NAO robot uses a controller script called `nao_talk` (maintained in your Webots project)
-   * `nao_talk` communicates with the Python backend (via `control_server.py` or by updating `control_flags.txt`) to:
-
-     * Tell the backend when the robot should listen
-     * Optionally read back status (for LEDs, animations, etc.)
-
-3. Web UI (React, optional)
-
-   * Located in `webui/`
-   * Provides an optional browser-based interface for monitoring or controlling the simulation
-   * Talks to the backend (currently minimal / experimental)
-
----
-
-## Repository Structure
-
-nao-llm-conversation-poc/
-├─ audio/
-│  ├─ `__init__.py`
-│  ├─ `asr_whisper.py`     (ASR using OpenAI Whisper API)
-│  └─ `tts.py`             (Text-to-speech via PC speakers)
-
-├─ backends/
-│  ├─ `simulation_backend.py`  (Backend for Webots / PC simulation)
-│  └─ `real_backend.py`        (Skeleton for real NAO / NAOqi integration)
-
-├─ webui/                  (React-based web UI, optional)
-│  ├─ src/
-│  ├─ public/
-│  ├─ package.json
-│  └─ …
-
-├─ `control_flags.txt`      (Simple flags used for controlling the loop)
-├─ `control_server.py`      (HTTP/socket server used by Webots `nao_talk`)
-├─ `conversation_loop.py`   (Main conversation loop orchestrator)
-├─ `nao_interface.py`       (Common interface for NAO / simulation backends)
-├─ `requirements.txt`       (Python dependencies)
-├─ `robot_state.py`         (Writes `robot_state.txt` — idle/listening/etc.)
-├─ `robot_state.txt`        (Generated at runtime, ignored by git)
-├─ `settings.json`          (Runtime configuration: ports, modes, etc.)
-├─ `.gitignore`
-└─ `README.md`
-
-Note: Webots world files and the `nao_talk` controller script live in your Webots project, not in this repo.
-
----
+RoastCrowd is a turn-based voice conversation system for human-robot interaction (HRI) research. A human speaks into a laptop microphone, the system transcribes their speech, sends it to an LLM that responds with configurable hostility (five discrete levels from dismissive to maximum aggression), converts the response to speech, and plays it through either laptop speakers (simulation mode) or a NAO robot's speakers (real mode). The system is designed for researchers studying the effects of hostile agent behavior on human participants. It logs everything — transcripts, audio files, latency breakdowns, and configuration snapshots — to an SQLite database for post-experiment analysis.
 
 ## Prerequisites
 
-Backend (Python)
+- **Python 3.10+**
+- **A Grok or OpenAI-compatible API key** for the LLM
+- **An OpenAI API key** for TTS (text-to-speech)
+- A working microphone connected to your computer
 
-* Python 3.11+ (recommended current 3.x)
-* pip
-* Internet access (for Whisper + LLM API calls)
+## Quick Start
 
-Web UI (optional)
+```bash
+# Clone the repository
+git clone https://github.com/YOUR_USERNAME/roastcrowd.git
+cd roastcrowd
 
-* Node.js LTS (e.g. 18.x or 20.x)
-* npm
-
-Simulation
-
-* Webots installed
-* NAO model available in your Webots installation
-
----
-
-## Installation – Backend (Python)
-
-Clone the repository:
-
-git clone [https://github.com/Tomer232/nao-llm-conversation-poc.git](https://github.com/Tomer232/nao-llm-conversation-poc.git)
-cd nao-llm-conversation-poc
-
-Create and activate a virtual environment (Windows):
-
+# Create and activate virtual environment
 python -m venv venv
-venv\Scripts\activate
+source venv/bin/activate  # Linux/Mac
+# or: venv\Scripts\activate  # Windows
 
-Install dependencies:
-
+# Install dependencies
 pip install -r requirements.txt
 
----
+# Set API keys
+export GROK_API_KEY=your-grok-api-key-here
+export OPENAI_API_KEY=your-openai-api-key-here
+# On Windows: set GROK_API_KEY=... or add to .env file
 
-## API Keys and Configuration
+# Run with web UI
+python main.py
 
-The backend expects two environment variables, provided via a local `.env` file in the project root.
+# Or run in terminal mode (no web server)
+python main.py --no-ui
+```
 
-Create a `.env` file in the root of the project with:
+Open http://localhost:8000 in your browser to access the web UI.
 
-# LLM key (e.g. Grok or other provider)
+## Configuration
 
-GROK_API_KEY=your_grok_or_llm_key_here
+All settings are in `config.yaml`. No hardcoded values anywhere. API keys are read from environment variables (or a `.env` file).
 
-# OpenAI key for Whisper ASR
+### Audio
 
-OPENAI_API_KEY=your_openai_key_here
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `sample_rate` | 16000 | Recording sample rate in Hz |
+| `silence_threshold_ms` | 700 | Silence duration (ms) to end an utterance |
+| `min_speech_duration_ms` | 300 | Minimum speech length to accept (filters coughs/noise) |
 
-Notes:
+### ASR (Automatic Speech Recognition)
 
-* `.env` is ignored by git (see `.gitignore`) and must never be committed.
-* If you use a different LLM provider instead of Grok, you can keep the env name `GROK_API_KEY` but adapt the Python code to call your provider.
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `model_size` | `base.en` | Whisper model size (`tiny.en`, `base.en`, `small`, `medium`) |
+| `device` | `auto` | Compute device (`cpu`, `cuda`, `auto`) |
 
----
+### LLM
 
-## Running – Backend Simulation Mode (no Webots)
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `provider_name` | `Grok` | Display name for the provider |
+| `base_url` | `https://api.x.ai/v1` | API endpoint (any OpenAI-compatible URL) |
+| `model` | `grok-4-fast` | Model name |
+| `max_tokens` | 256 | Maximum response length |
+| `temperature` | 0.9 | Response randomness (0.0-2.0) |
+| `api_key_env` | `GROK_API_KEY` | Name of the environment variable holding the API key |
+| `stream` | `false` | Streaming mode (future extension, not implemented) |
 
-This is the simplest way to test that everything works using your PC microphone and speakers.
+### TTS (Text-to-Speech)
 
-From the project root:
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `engine` | `openai` | TTS engine |
+| `default_voice` | `onyx` | Default voice name |
+| `model` | `gpt-4o-mini-tts` | OpenAI TTS model |
+| `api_key_env` | `OPENAI_API_KEY` | Environment variable for the TTS API key |
 
-venv\Scripts\activate
-python conversation_loop.py
+Available voices: alloy, echo, fable, onyx, nova, shimmer, coral, verse, ballad, ash, sage, marin, cedar.
 
-Behavior (simplified):
+### NAO Robot
 
-* Backend prints a greeting (simulation)
-* It listens via your microphone using Whisper API
-* It sends the recognized text to the LLM
-* It speaks the LLM answer via your PC speakers
-* Internal state is written to `robot_state.txt` in the sequence:
-  idle → listening → thinking → speaking → idle
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `mode` | `simulated` | `simulated` (laptop only) or `real` (NAO robot) |
+| `ip` | `169.254.178.111` | NAO robot IP address |
+| `port` | 9600 | TCP port for nao_speaker_server.py |
+| `naoqi_port` | 9559 | NAOqi SDK port |
+| `use_builtin_tts` | `true` | Use NAO's built-in TTS (lower latency) vs local TTS |
 
-You can stop the process with `Ctrl + C`.
+### Hostility
 
----
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `default_level` | 3 | Default hostility level (1-5) |
+| `prompts_dir` | `prompts` | Directory containing prompt text files |
 
-## Running – Full Simulation with Webots + `nao_talk`
+### Logging
 
-This section assumes you already have a Webots project with:
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `db_path` | `data/roastcrowd.db` | SQLite database path |
+| `audio_dir` | `data/audio` | Directory for WAV audio files |
+| `save_audio` | `true` | Whether to save audio files to disk |
 
-* A world named `nao_demo` (or similar)
-* A NAO robot node whose controller is `nao_talk`
+### Server
 
-If you do not have this yet, create or adapt a Webots world with a NAO robot and write a controller script named `nao_talk` that can talk to the backend via HTTP or via file/flag mechanism.
+| Setting | Default | Description |
+|---------|---------|-------------|
+| `host` | `0.0.0.0` | Web server bind address |
+| `port` | 8000 | Web server port |
 
-### 1. Start the backend
+## Hostility Levels
 
-In a terminal:
+| Level | Name | Behavior |
+|-------|------|----------|
+| 1 | Dismissive | Mildly uninterested, curt. Short clipped responses, changes subject, shows boredom. |
+| 2 | Sarcastic | Condescending, passive-aggressive. Irony, backhanded compliments, rhetorical questions. |
+| 3 | Confrontational | Directly challenges and argues. Demands evidence, questions logic, calls out vagueness. |
+| 4 | Hostile | Openly rude, insulting, belittling. Attacks intelligence and ideas, expresses contempt. |
+| 5 | Maximum | All aggressive behaviors at maximum intensity within safety bounds. Relentless verbal demolition. |
 
-cd nao-llm-conversation-poc
-venv\Scripts\activate
-python control_server.py    (optional, if `nao_talk` uses it)
+All levels include mandatory safety boundaries: no self-harm encouragement, no violence threats, no slurs, no harmful instructions, no inappropriate content involving minors, and automatic character-breaking to provide crisis resources if the user appears distressed.
 
-Then, either in another terminal or after starting the control server:
+## Data Format
 
-venv\Scripts\activate
-python conversation_loop.py
+### SQLite Database (`data/roastcrowd.db`)
 
-Make sure:
+**Sessions table**: session_id (PK), participant_id, hostility_level, start_time, end_time, config_snapshot (JSON), notes.
 
-* `settings.json` and/or `control_flags.txt` match what your `nao_talk` controller expects (ports, flags, etc.).
-* Example: if `nao_talk` calls `http://localhost:5005/start_listening`, ensure that `control_server.py` is configured to listen on port `5005`.
+**Turns table**: turn_id (PK), session_id (FK), turn_number, timestamp, user_audio_path, user_transcript, transcript_confidence, llm_input (full prompt JSON), llm_output, llm_model, tokens_used, tts_voice, tts_audio_path, hostility_level, latency_vad_ms, latency_asr_ms, latency_llm_ms, latency_tts_ms, latency_total_ms.
 
-### 2. Configure Webots to use `nao_talk`
+### Audio Files
 
-In Webots:
+Saved under `data/audio/SESSION_ID/`:
+- `turn_001_user.wav` — Participant's recorded speech
+- `turn_001_agent.wav` — Agent's synthesized response
 
-1. Open your NAO world (e.g. `nao_demo`).
-2. Select the NAO robot node in the scene tree.
-3. Set its Controller field to `nao_talk`.
-4. Ensure the `nao_talk` controller script:
+## Switching LLM Providers
 
-   * Connects to the backend (for example via HTTP to `control_server.py`), or
-   * Updates `control_flags.txt` and/or reads `robot_state.txt` in order to know when to trigger speech, animations, etc.
+RoastCrowd works with any OpenAI-compatible API. Just change `base_url` and `model` in `config.yaml`:
 
-Typical logic in `nao_talk`:
+```yaml
+# OpenAI
+llm:
+  base_url: "https://api.openai.com/v1"
+  model: "gpt-4o"
+  api_key_env: "OPENAI_API_KEY"
 
-* When the user presses a key, clicks a button in Webots, or some condition is met:
+# Groq
+llm:
+  base_url: "https://api.groq.com/openai/v1"
+  model: "llama-3.1-70b-versatile"
+  api_key_env: "GROQ_API_KEY"
 
-  * Send a “start listening” signal to the backend.
-* Poll or receive updates for the backend state (from `robot_state.txt` or an API).
-* Change NAO posture / eye LEDs depending on state, for example:
+# Local Ollama
+llm:
+  base_url: "http://localhost:11434/v1"
+  model: "llama3"
+  api_key_env: "OLLAMA_API_KEY"  # set to any non-empty string
+```
 
-  * `listening` → blue
-  * `thinking` → yellow
-  * `speaking` → green
-* Optionally play audio inside Webots if you route audio outputs into the simulation.
+## Switching to Real NAO Mode
 
-### 3. Run the simulation
+1. Deploy `nao_speaker_server.py` to the NAO robot via SCP
+2. Start the speaker server on the robot: `python nao_speaker_server.py`
+3. Update `config.yaml`:
 
-1. Ensure `conversation_loop.py` (and `control_server.py` if used) are running and ready.
-2. Press Play in Webots to start the `nao_talk` controller.
-3. Trigger the conversation (key press or any event inside `nao_talk`).
+```yaml
+nao:
+  mode: "real"
+  ip: "169.254.178.111"  # your robot's IP
+  port: 9600
+  use_builtin_tts: true  # use NAO's built-in TTS for lower latency
+```
 
-The NAO in Webots should:
+4. Run `python main.py`
 
-* Indicate “listening”
-* Wait for your speech (via PC mic and Whisper)
-* Wait for the LLM reply
-* Perform a “speaking” action (robot gesture, Webots audio, or both)
+## Exporting and Analyzing Session Data
 
-If nothing happens:
+**Via the web UI**: Click the "Export" button to download the current session as JSON.
 
-* Confirm `control_server.py` is reachable from `nao_talk`.
-* Check that host and port match between `nao_talk` and `settings.json`.
-* Check terminal logs from both Webots (controller console) and Python backend.
+**Via the API**: `GET /api/sessions/{session_id}/export` returns a JSON file.
 
----
+**Direct SQLite access**:
+```python
+import sqlite3
+conn = sqlite3.connect("data/roastcrowd.db")
+conn.row_factory = sqlite3.Row
 
-## Web UI (Optional)
+# List all sessions
+sessions = conn.execute("SELECT * FROM sessions ORDER BY start_time DESC").fetchall()
 
-The `webui` folder contains a React-based UI. It is optional and is not required for the core simulation to work. You can use it to:
+# Get all turns for a session
+turns = conn.execute(
+    "SELECT * FROM turns WHERE session_id = ? ORDER BY turn_number",
+    (session_id,)
+).fetchall()
 
-* Display basic status of the conversation
-* Provide buttons to trigger listening, reset, or debug (depending on how you extend it)
+# Average latency per session
+conn.execute("""
+    SELECT session_id, AVG(latency_total_ms) as avg_latency
+    FROM turns GROUP BY session_id
+""").fetchall()
+```
 
-Setup:
+## API Endpoints
 
-cd webui
-npm install
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/` | Web UI |
+| GET | `/api/status` | Current system state |
+| POST | `/api/session/start` | Start a session (body: participant_id, hostility_level) |
+| POST | `/api/session/stop` | End the current session |
+| GET | `/api/session/current` | Current session info |
+| POST | `/api/settings` | Update runtime settings |
+| GET | `/api/voices` | List available TTS voices |
+| GET | `/api/sessions` | List all past sessions |
+| GET | `/api/sessions/{id}/export` | Export session as JSON |
+| WS | `/ws/conversation` | Real-time turn updates via WebSocket |
 
-Run:
+## Citation
 
-npm start
-
-This usually opens `http://localhost:3000` in your browser.
-
-If you extend the backend with HTTP endpoints (for status or controls), you can connect this React app to those endpoints.
-
----
-
-## Configuration Files
-
-### `settings.json`
-
-Used to configure runtime options, such as:
-
-* Backend mode (simulation vs real robot)
-* Ports for `control_server.py`
-* Other tuning flags
-
-Example (adapt to match your actual file):
-
-{
-"mode": "simulation",
-"control_server_host": "127.0.0.1",
-"control_server_port": 5005
+```bibtex
+@software{roastcrowd2026,
+  title = {RoastCrowd: A Turn-Based Hostile Voice Conversation System for HRI Research},
+  author = {TODO},
+  year = {2026},
+  url = {https://github.com/TODO/roastcrowd}
 }
-
-Keep `settings.json` free of secrets (no API keys).
-
----
-
-### `control_flags.txt`
-
-Simple text file read/written by `control_server.py` / `nao_talk` / `conversation_loop.py` to coordinate:
-
-* When to start listening
-* When to stop
-* Pausing / resuming loops
-
-You can inspect and adapt the logic inside `control_server.py` and `conversation_loop.py` to match your preferred control flow.
-
----
-
-### `robot_state.txt`
-
-* Automatically written by `robot_state.py`.
-* Contains a single word: `idle`, `listening`, `thinking`, or `speaking`.
-* Can be read by the Webots controller or other tools to visualize the robot’s internal state.
-* Ignored by git and recreated at runtime.
-
----
-
-## Development Notes
-
-The system is intentionally designed as a POC: simple, readable, and easy to extend.
-
-You can swap:
-
-* The LLM provider (keep the same interface in `conversation_loop.py`).
-* The ASR provider (replace Whisper with another engine in `audio/asr_whisper.py`).
-* The TTS backend (replace `pyttsx3` in `audio/tts.py` with any other TTS engine).
-
-Recommended extensions:
-
-* Implement the full real NAO backend in `backends/real_backend.py` using NAOqi.
-* Add richer NAO gestures and LED patterns based on `robot_state.txt`.
-* Improve the Web UI to show:
-
-  * Live transcript
-  * LLM responses
-  * State timeline
-* Add configuration options for switching models (Grok vs others).
+```

@@ -1,0 +1,17 @@
+[2026-02-24 14:29:03.041] [MAIN] Session starting. personality=JAKE mode=real
+[2026-02-24 14:29:03.045] [MAIN] Real robot backend at 169.254.98.221
+[2026-02-24 14:29:24.099] [EVALUATOR] Started. interval=5s
+[2026-02-24 14:29:24.099] [MAIN] Session loop running.
+[2026-02-24 14:29:29.102] [EVALUATOR] Speaker silent for >15s, checking silence prompt...
+[2026-02-24 14:29:29.102] [TIMING] int_001 | eval_start | elapsed=0.0ms
+[2026-02-24 14:29:29.102] [TIMING] int_001 | grok_request_sent | elapsed=0.0ms
+[2026-02-24 14:29:31.208] [TIMING] int_001 | grok_response_received | elapsed=2106.3ms
+[2026-02-24 14:29:31.208] [EVAL] int_001 | INTERRUPT | transcript_len=16 | grok_raw='silence_prompt interrupt=True' | speech='Earth to speaker... you done or just lost for words already?'
+[2026-02-24 14:29:31.208] [EVALUATOR] Silence prompt fired: int_001 | Earth to speaker... you done or just lost for words already?
+[2026-02-24 14:29:31.261] [INTERRUPT] int_001 — Delivering: Earth to speaker... you done or just lost for words already?
+[2026-02-24 14:29:31.263] [TIMING] int_001 | tts_request_sent | elapsed=55.5ms
+[2026-02-24 14:29:31.263] [TIMING] int_001 | robot_command_sent | elapsed=0.0ms
+[2026-02-24 14:29:52.305] [TIMING] int_001 | robot_speaking_confirmed | elapsed=21042.1ms
+[2026-02-24 14:29:52.808] [INTERRUPT] int_001 — Delivery complete.
+[2026-02-24 14:29:56.462] [MAIN] KeyboardInterrupt — shutting down.
+[2026-02-24 14:29:56.462] [EVALUATOR] Stopped.

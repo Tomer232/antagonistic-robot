@@ -1,0 +1,50 @@
+# RoastCrowd Configuration
+# All settings for the turn-based hostile voice conversation system.
+# API keys are read from environment variables (not stored here).
+
+audio:
+  sample_rate: 16000
+  silence_threshold_ms: 700
+  min_speech_duration_ms: 300
+
+asr:
+  model_size: "base.en"
+  device: "auto"
+
+llm:
+  provider_name: "Grok"
+  base_url: "https://api.x.ai/v1"
+  model: "grok-4-fast"
+  max_tokens: 256
+  temperature: 0.9
+  api_key_env: "GROK_API_KEY"
+  stream: false
+
+tts:
+  engine: "openai"
+  default_voice: "onyx"
+  model: "gpt-4o-mini-tts"
+  api_key_env: "OPENAI_API_KEY"
+
+nao:
+  mode: "simulated"        # "simulated" or "real"
+  ip: "169.254.178.111"
+  port: 9600
+  naoqi_port: 9559
+  password: "nao"
+  use_builtin_tts: true
+
+avct:
+  default_polar_level: 2
+  default_category: "D"
+  default_subtype: 2
+  prompts_dir: "prompts"
+
+logging:
+  db_path: "data/roastcrowd.db"
+  audio_dir: "data/audio"
+  save_audio: true
+
+server:
+  host: "0.0.0.0"
+  port: 8000

@@ -1,0 +1,8 @@
+[2026-02-24 15:06:36.406] [MAIN] Session starting. personality=JAKE mode=real
+[2026-02-24 15:06:36.410] [MAIN] Real robot backend at 169.254.178.111
+[2026-02-24 15:06:57.447] [MAIN] WARNING: Greeting failed to reach robot. Continuing with ASR only.
+[2026-02-24 15:06:57.449] [EVALUATOR] Started. interval=5s
+[2026-02-24 15:06:57.449] [MAIN] Session loop running.
+[2026-02-24 15:06:58.101] [MAIN] KeyboardInterrupt — shutting down.
+[2026-02-24 15:06:58.101] [EVALUATOR] Stopped.
+[2026-02-24 15:07:00.111] [MAIN] Session ended.

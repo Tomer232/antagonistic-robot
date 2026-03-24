@@ -1,12 +1,15 @@
 {
-  "question_difficulty": "easy",
-  "interruption_mode": "fixed",
-  "fixed_interval_seconds": 25,
-  "max_interruptions_per_minute": 2,
-  "audience_attitude": "hostile",
-  "max_aggressiveness": "medium",
+  "intensity": 5,
+  "attack_vector": "logic",
+  "response_style": "interrogative",
+  "recording_duration_seconds": 2,
+  "mode": "simulation",
+  "nao_ip": "169.254.178.111",
+  "robot_ip": "169.254.178.111",
+  "robot_port": 9559,
+  "robot_password": "nao",
   "total_session_minutes": 0,
-  "warmup_seconds": 5,
-  "max_speaking_seconds": 20,
-  "tts_voice": "sage"
+  "warmup_seconds": 0,
+  "tts_voice": "onyx",
+  "silence_chunks_to_end_turn": 1
 }

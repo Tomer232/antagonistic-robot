@@ -1,0 +1,6 @@
+{"session_id": "session_20260224_142903", "interrupt_id": "int_001", "checkpoint": "eval_start", "t": 1771936169.102, "elapsed_ms": 0.0}
+{"session_id": "session_20260224_142903", "interrupt_id": "int_001", "checkpoint": "grok_request_sent", "t": 1771936169.102, "elapsed_ms": 0.0}
+{"session_id": "session_20260224_142903", "interrupt_id": "int_001", "checkpoint": "grok_response_received", "t": 1771936171.208, "elapsed_ms": 2106.3}
+{"session_id": "session_20260224_142903", "interrupt_id": "int_001", "checkpoint": "tts_request_sent", "t": 1771936171.264, "elapsed_ms": 55.5}
+{"session_id": "session_20260224_142903", "interrupt_id": "int_001", "checkpoint": "robot_command_sent", "t": 1771936171.264, "elapsed_ms": 0.0}
+{"session_id": "session_20260224_142903", "interrupt_id": "int_001", "checkpoint": "robot_speaking_confirmed", "t": 1771936192.306, "elapsed_ms": 21042.1}

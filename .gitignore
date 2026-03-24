@@ -1,6 +1,7 @@
 # Python
 __pycache__/
 *.pyc
+*.pyo
 
 # Virtual env
 venv/
@@ -13,3 +14,17 @@ robot_state.txt
 # IDE
 .idea/
 .vscode/
+
+# Backup files
+*.bak
+
+# Runtime data (logs, audio, database)
+data/
+
+# Old runtime files
+control_flags.txt
+conversation_log.jsonl
+
+# OS files
+Thumbs.db
+.DS_Store

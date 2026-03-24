@@ -1,24 +1,24 @@
 import os
-import subprocess
+import threading
 import json
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 
-app = Flask(__name__)
-CORS(app)
-
 # Base project directory
 BASE_DIR = r"C:\Users\tomer\Desktop\NAO_LLM"
+
+# Serve React build (run `npm run build` in webui/ first)
+WEBUI_BUILD = os.path.join(BASE_DIR, "webui", "build")
+
+app = Flask(__name__, static_folder=WEBUI_BUILD, static_url_path="")
+CORS(app)
 CONTROL_FILE = os.path.join(BASE_DIR, "control_flags.txt")
 LOG_FILE = os.path.join(BASE_DIR, "conversation_log.jsonl")
 SETTINGS_FILE = os.path.join(BASE_DIR, "settings.json")
 ROBOT_STATE_FILE = os.path.join(BASE_DIR, "robot_state.txt")  # same as nao_talk.py
 
-# Explicit venv Python path
-PYTHON_EXE = os.path.join(BASE_DIR, "venv", "Scripts", "python.exe")
-
-# Track the conversation process
-conversation_proc = None
+# Track the conversation thread
+conversation_thread = None
 
 # Simple status cache for API responses
 system_state = {
@@ -27,22 +27,22 @@ system_state = {
 
 # Default settings (must match conversation_loop.py)
 DEFAULT_SETTINGS = {
-    "question_difficulty": "hard",          # "easy" | "medium" | "hard"
-    "interruption_mode": "random",          # "random" | "fixed"
-    "fixed_interval_seconds": 30,           # Used when interruption_mode == "fixed"
-    "max_interruptions_per_minute": 3,      # Hard interruptions per 60 sec
+    # Intensity control
+    "intensity": 5,                           # 0-10 slider
+    "attack_vector": "logic",                 # "logic" | "credibility" | "delivery" | "facts"
+    "response_style": "confrontational",      # "dismissive" | "confrontational" | "sarcastic" | "interrogative"
+    "recording_duration_seconds": 2,          # audio chunk size for streaming ASR
 
-    "audience_attitude": "neutral",         # "supportive" | "neutral" | "skeptical" | "hostile"
-    "max_aggressiveness": "medium",         # "low" | "medium" | "high"
+    # Robot connection
+    "mode": "simulation",                     # "simulation" | "real"
+    "nao_ip": "192.168.1.100",               # kept for backward compat
+    "robot_ip": "192.168.1.100",
+    "robot_port": 9559,
+    "robot_password": "nao",
 
-    "total_session_minutes": 0,             # 0 = unlimited
-    "warmup_seconds": 0,                    # No hard interruptions during this period
-    "max_speaking_seconds": 15,             # Per turn, passed to ASR
-
-    # NEW: TTS voice for OpenAI TTS
-    # Allowed (OpenAI human voices): "alloy", "echo", "fable", "onyx",
-    # "nova", "shimmer", "coral", "verse", "ballad", "ash", "sage",
-    # "marin", "cedar"
+    # Session structure
+    "total_session_minutes": 0,               # 0 = unlimited
+    "warmup_seconds": 0,
     "tts_voice": "onyx",
 }
 
@@ -62,19 +62,8 @@ def load_settings():
 
     # Safety: if tts_voice in file is invalid, normalize to default
     allowed_voices = {
-        "alloy",
-        "echo",
-        "fable",
-        "onyx",
-        "nova",
-        "shimmer",
-        "coral",
-        "verse",
-        "ballad",
-        "ash",
-        "sage",
-        "marin",
-        "cedar",
+        "alloy", "echo", "fable", "onyx", "nova", "shimmer",
+        "coral", "verse", "ballad", "ash", "sage", "marin", "cedar",
     }
     tv = settings.get("tts_voice", "onyx")
     if tv not in allowed_voices:
@@ -95,46 +84,67 @@ def validate_and_merge_settings(payload):
     """Validate incoming settings and merge into current settings."""
     s = load_settings()
 
-    # question_difficulty
-    qd = payload.get("question_difficulty")
-    if qd in ("easy", "medium", "hard"):
-        s["question_difficulty"] = qd
+    # --- Intensity control ---
 
-    # interruption_mode
-    im = payload.get("interruption_mode")
-    if im in ("random", "fixed"):
-        s["interruption_mode"] = im
+    # intensity (0-10 slider)
+    if "intensity" in payload:
+        try:
+            val = int(payload["intensity"])
+            s["intensity"] = max(0, min(10, val))
+        except (ValueError, TypeError):
+            pass
 
-    # fixed_interval_seconds
+    # attack_vector
+    av = payload.get("attack_vector")
+    if av in ("logic", "credibility", "delivery", "facts"):
+        s["attack_vector"] = av
+
+    # response_style
+    rs = payload.get("response_style")
+    if rs in ("dismissive", "confrontational", "sarcastic", "interrogative"):
+        s["response_style"] = rs
+
+    # recording_duration_seconds
     try:
-        fis = int(payload.get("fixed_interval_seconds", s["fixed_interval_seconds"]))
-        fis = max(5, min(fis, 600))
-        s["fixed_interval_seconds"] = fis
+        rds = int(payload.get("recording_duration_seconds",
+                              s.get("recording_duration_seconds", 2)))
+        rds = max(1, min(rds, 10))
+        s["recording_duration_seconds"] = rds
     except Exception:
         pass
 
-    # max_interruptions_per_minute
+    # --- Robot connection ---
+
+    # mode
+    mode = payload.get("mode")
+    if mode in ("simulation", "real"):
+        s["mode"] = mode
+
+    # robot_ip (accept both "robot_ip" and legacy "nao_ip")
+    rip = payload.get("robot_ip", payload.get("nao_ip"))
+    if isinstance(rip, str) and rip.strip():
+        s["robot_ip"] = rip.strip()
+        s["nao_ip"] = rip.strip()
+
+    # robot_port
     try:
-        mipm = int(payload.get("max_interruptions_per_minute", s["max_interruptions_per_minute"]))
-        mipm = max(0, min(mipm, 60))
-        s["max_interruptions_per_minute"] = mipm
+        rport = int(payload.get("robot_port", s.get("robot_port", 9559)))
+        rport = max(1, min(rport, 65535))
+        s["robot_port"] = rport
     except Exception:
         pass
 
-    # audience_attitude
-    aa = payload.get("audience_attitude")
-    if aa in ("supportive", "neutral", "skeptical", "hostile"):
-        s["audience_attitude"] = aa
+    # robot_password
+    rpwd = payload.get("robot_password")
+    if isinstance(rpwd, str):
+        s["robot_password"] = rpwd
 
-    # max_aggressiveness
-    ma = payload.get("max_aggressiveness")
-    if ma in ("low", "medium", "high"):
-        s["max_aggressiveness"] = ma
+    # --- Session structure ---
 
     # total_session_minutes
     try:
         tsm = int(payload.get("total_session_minutes", s["total_session_minutes"]))
-        tsm = max(0, min(tsm, 240))  # up to 4 hours
+        tsm = max(0, min(tsm, 240))
         s["total_session_minutes"] = tsm
     except Exception:
         pass
@@ -142,34 +152,15 @@ def validate_and_merge_settings(payload):
     # warmup_seconds
     try:
         wus = int(payload.get("warmup_seconds", s["warmup_seconds"]))
-        wus = max(0, min(wus, 600))  # up to 10 minutes
+        wus = max(0, min(wus, 600))
         s["warmup_seconds"] = wus
     except Exception:
         pass
 
-    # max_speaking_seconds
-    try:
-        mss = int(payload.get("max_speaking_seconds", s["max_speaking_seconds"]))
-        mss = max(5, min(mss, 120))
-        s["max_speaking_seconds"] = mss
-    except Exception:
-        pass
-
-    # NEW: tts_voice
+    # tts_voice
     allowed_voices = {
-        "alloy",
-        "echo",
-        "fable",
-        "onyx",
-        "nova",
-        "shimmer",
-        "coral",
-        "verse",
-        "ballad",
-        "ash",
-        "sage",
-        "marin",
-        "cedar",
+        "alloy", "echo", "fable", "onyx", "nova", "shimmer",
+        "coral", "verse", "ballad", "ash", "sage", "marin", "cedar",
     }
     tv = payload.get("tts_voice")
     if isinstance(tv, str) and tv in allowed_voices:
@@ -209,16 +200,15 @@ def read_robot_state() -> str:
 
 
 def refresh_status_from_process():
-    global conversation_proc, system_state
+    global conversation_thread, system_state
 
-    if conversation_proc is not None:
-        ret = conversation_proc.poll()
-        if ret is not None:
-            conversation_proc = None
+    if conversation_thread is not None:
+        if not conversation_thread.is_alive():
+            conversation_thread = None
             system_state["status"] = "ended"
             return
 
-    if conversation_proc is not None:
+    if conversation_thread is not None:
         flag = read_control_flag()
         if flag == "paused":
             system_state["status"] = "paused"
@@ -235,6 +225,12 @@ def refresh_status_from_process():
 # ---------------------------------------------------------
 # API endpoints
 # ---------------------------------------------------------
+@app.route("/")
+def serve_index():
+    """Serve the React web UI."""
+    return app.send_static_file("index.html")
+
+
 @app.route("/status", methods=["GET"])
 def get_status():
     refresh_status_from_process()
@@ -262,21 +258,12 @@ def settings_endpoint():
 
 @app.route("/start", methods=["POST"])
 def start_conversation():
-    global conversation_proc, system_state
+    global conversation_thread, system_state
 
     refresh_status_from_process()
 
-    if conversation_proc is not None and conversation_proc.poll() is None:
+    if conversation_thread is not None and conversation_thread.is_alive():
         return jsonify({"error": "Conversation already running", "status": system_state["status"]}), 400
-
-    # Safety: check python exe and script exist
-    conv_script = os.path.join(BASE_DIR, "conversation_loop.py")
-    if not os.path.exists(PYTHON_EXE):
-        print(f"[CONTROL] ERROR: Python executable not found at {PYTHON_EXE}")
-        return jsonify({"error": "Python executable not found", "status": system_state["status"]}), 500
-    if not os.path.exists(conv_script):
-        print(f"[CONTROL] ERROR: conversation_loop.py not found at {conv_script}")
-        return jsonify({"error": "conversation_loop.py not found", "status": system_state["status"]}), 500
 
     # Reset control flag and clear log for a fresh session
     write_control_flag("running")
@@ -286,18 +273,15 @@ def start_conversation():
     except IOError as e:
         print(f"[CONTROL] Failed to clear log file: {e}")
 
-    print("[CONTROL] Starting conversation_loop.py.")
-    print(f"[CONTROL] Using interpreter: {PYTHON_EXE}")
+    print("[CONTROL] Starting conversation loop (in-process thread).")
     try:
-        conversation_proc = subprocess.Popen(
-            [PYTHON_EXE, "conversation_loop.py"],
-            cwd=BASE_DIR,
-            stdout=None,
-            stderr=None,
-            shell=False,
+        from conversation_loop import main as conversation_main
+        conversation_thread = threading.Thread(
+            target=conversation_main, daemon=True, name="conversation-loop"
         )
+        conversation_thread.start()
     except Exception as e:
-        print(f"[CONTROL] Failed to start conversation_loop.py: {e}")
+        print(f"[CONTROL] Failed to start conversation loop: {e}")
         return jsonify({"error": str(e), "status": system_state["status"]}), 500
 
     system_state["status"] = "running"
@@ -373,7 +357,15 @@ def get_log():
     return jsonify(events)
 
 
+@app.errorhandler(404)
+def not_found(e):
+    """Serve React app for client-side routes."""
+    index_path = os.path.join(WEBUI_BUILD, "index.html")
+    if os.path.exists(index_path):
+        return app.send_static_file("index.html")
+    return jsonify({"error": "Not found"}), 404
+
+
 if __name__ == "__main__":
     print(f"[CONTROL] BASE_DIR = {BASE_DIR}")
-    print(f"[CONTROL] PYTHON_EXE = {PYTHON_EXE}")
     app.run(host="127.0.0.1", port=5000, debug=False)
