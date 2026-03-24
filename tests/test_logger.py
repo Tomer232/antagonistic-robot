@@ -6,8 +6,8 @@ import tempfile
 import numpy as np
 import pytest
 
-from roastcrowd.logging.session_logger import SessionLogger
-from roastcrowd.pipeline.types import (
+from antagonist_robot.logging.session_logger import SessionLogger
+from antagonist_robot.pipeline.types import (
     ASRResult,
     AudioData,
     LLMResult,
@@ -62,6 +62,11 @@ def _make_turn(turn_number: int = 1) -> tuple:
         llm_response="Whatever.",
         tts_result=tts_result,
         hostility_level=3,
+        polar_level=3,
+        category="D",
+        subtype=2,
+        modifiers=[],
+        risk_rating="Amber",
         latency={"vad_ms": 100, "asr_ms": 50, "llm_ms": 200, "tts_ms": 300, "total_ms": 650},
         timestamp="2026-01-01T00:00:02Z",
     )
@@ -73,17 +78,17 @@ class TestSessionLogger:
 
     def test_create_session(self, logger):
         """create_session inserts a record."""
-        logger.create_session("s1", "P001", 3)
+        logger.create_session("s1", "P001", 3, category="D", subtype=2, modifiers=[], config_snapshot=None)
         sessions = logger.get_sessions()
         assert len(sessions) == 1
         assert sessions[0]["session_id"] == "s1"
         assert sessions[0]["participant_id"] == "P001"
-        assert sessions[0]["hostility_level"] == 3
+        assert sessions[0]["polar_level"] == 3
         assert sessions[0]["end_time"] is None
 
     def test_log_turn(self, logger):
         """log_turn inserts a complete turn record."""
-        logger.create_session("s1", "P001", 3)
+        logger.create_session("s1", "P001", 3, category="D", subtype=2, modifiers=[], config_snapshot=None)
         turn, asr_result, llm_result = _make_turn()
         logger.log_turn("s1", turn, asr_result, llm_result, "Be mean.")
 
@@ -96,7 +101,7 @@ class TestSessionLogger:
 
     def test_end_session(self, logger):
         """end_session sets the end_time."""
-        logger.create_session("s1", "P001", 3)
+        logger.create_session("s1", "P001", 3, category="D", subtype=2, modifiers=[], config_snapshot=None)
         logger.end_session("s1")
 
         sessions = logger.get_sessions()
@@ -104,15 +109,15 @@ class TestSessionLogger:
 
     def test_get_sessions_ordered(self, logger):
         """get_sessions returns sessions in reverse chronological order."""
-        logger.create_session("s1", "P001", 1)
-        logger.create_session("s2", "P002", 2)
+        logger.create_session("s1", "P001", 1, category="B", subtype=1, modifiers=[], config_snapshot=None)
+        logger.create_session("s2", "P002", 2, category="C", subtype=1, modifiers=[], config_snapshot=None)
         sessions = logger.get_sessions()
         # Most recent first
         assert sessions[0]["session_id"] == "s2"
 
     def test_export_session(self, logger):
         """export_session returns session + all turns."""
-        logger.create_session("s1", "P001", 3)
+        logger.create_session("s1", "P001", 3, category="D", subtype=2, modifiers=[], config_snapshot=None)
 
         for i in range(3):
             turn, asr_result, llm_result = _make_turn(turn_number=i + 1)
@@ -130,7 +135,7 @@ class TestSessionLogger:
 
     def test_audio_files_saved(self, logger, tmp_path):
         """Audio files are saved to disk when save_audio=True."""
-        logger.create_session("s1", "P001", 3)
+        logger.create_session("s1", "P001", 3, category="D", subtype=2, modifiers=[], config_snapshot=None)
         turn, asr_result, llm_result = _make_turn()
         logger.log_turn("s1", turn, asr_result, llm_result, "Prompt")
 

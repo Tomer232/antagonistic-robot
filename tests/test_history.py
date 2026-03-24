@@ -2,7 +2,7 @@
 
 import pytest
 
-from roastcrowd.conversation.history import ConversationHistory
+from antagonist_robot.conversation.history import ConversationHistory
 
 
 class TestConversationHistory:

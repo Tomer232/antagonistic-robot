@@ -17,12 +17,12 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from dotenv import load_dotenv
 load_dotenv()
 
-from roastcrowd.config.settings import load_config
-from roastcrowd.pipeline.audio_capture import AudioCapture
-from roastcrowd.pipeline.asr import ASREngine
-from roastcrowd.pipeline.llm import LLMEngine
-from roastcrowd.pipeline.tts import OpenAITTSEngine
-from roastcrowd.pipeline.audio_output import LaptopAudioOutput
+from antagonist_robot.config.settings import load_config
+from antagonist_robot.pipeline.audio_capture import AudioCapture
+from antagonist_robot.pipeline.asr import ASREngine
+from antagonist_robot.pipeline.llm import LLMEngine
+from antagonist_robot.pipeline.tts import OpenAITTSEngine
+from antagonist_robot.pipeline.audio_output import LaptopAudioOutput
 
 
 def main():

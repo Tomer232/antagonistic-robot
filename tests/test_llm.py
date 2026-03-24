@@ -4,9 +4,9 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from roastcrowd.config.settings import LLMConfig
-from roastcrowd.pipeline.llm import LLMEngine
-from roastcrowd.pipeline.types import LLMResult
+from antagonist_robot.config.settings import LLMConfig
+from antagonist_robot.pipeline.llm import LLMEngine
+from antagonist_robot.pipeline.types import LLMResult
 
 
 class TestLLMEngine:
@@ -21,7 +21,7 @@ class TestLLMEngine:
             max_tokens=100,
             temperature=0.7,
         )
-        with patch("roastcrowd.pipeline.llm.OpenAI") as mock_cls:
+        with patch("antagonist_robot.pipeline.llm.OpenAI") as mock_cls:
             engine = LLMEngine(config)
             return engine, mock_cls
 
@@ -33,7 +33,7 @@ class TestLLMEngine:
             api_key="fake-key",
         )
 
-        with patch("roastcrowd.pipeline.llm.OpenAI") as mock_cls:
+        with patch("antagonist_robot.pipeline.llm.OpenAI") as mock_cls:
             mock_client = MagicMock()
             mock_cls.return_value = mock_client
 
@@ -66,7 +66,7 @@ class TestLLMEngine:
             api_key="fake-key",
         )
 
-        with patch("roastcrowd.pipeline.llm.OpenAI") as mock_cls:
+        with patch("antagonist_robot.pipeline.llm.OpenAI") as mock_cls:
             mock_client = MagicMock()
             mock_cls.return_value = mock_client
 
@@ -97,7 +97,7 @@ class TestLLMEngine:
             temperature=0.5,
         )
 
-        with patch("roastcrowd.pipeline.llm.OpenAI") as mock_cls:
+        with patch("antagonist_robot.pipeline.llm.OpenAI") as mock_cls:
             mock_client = MagicMock()
             mock_cls.return_value = mock_client
 

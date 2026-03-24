@@ -5,7 +5,7 @@ import tempfile
 import pytest
 import yaml
 
-from roastcrowd.config.settings import load_config, AppConfig
+from antagonist_robot.config.settings import load_config, AppConfig
 
 
 def _write_config(tmp_dir: str, config_dict: dict) -> str:

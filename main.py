@@ -1,4 +1,4 @@
-"""RoastCrowd — Main entry point.
+"""Antagonistic Robot — Main entry point.
 
 Initializes all components, starts the web server (or runs in headless
 terminal mode with --no-ui), and orchestrates the conversation system.
@@ -21,7 +21,7 @@ load_dotenv()
 def main():
     """Parse arguments, load config, initialize all components, and start."""
     parser = argparse.ArgumentParser(
-        description="RoastCrowd — Hostile voice conversation system for HRI research"
+        description="Antagonistic Robot — Hostile voice conversation system for HRI research"
     )
     parser.add_argument(
         "--config",
@@ -41,21 +41,21 @@ def main():
     )
 
     # Load config
-    from roastcrowd.config.settings import load_config
+    from antagonist_robot.config.settings import load_config
 
     config = load_config(args.config)
 
     # Print startup banner
     print("=" * 54)
-    print("  RoastCrowd — Hostile Voice Conversation System")
+    print("  Antagonistic Robot — Hostile Voice Conversation System")
     print("=" * 54)
 
     # Initialize pipeline components
-    from roastcrowd.pipeline.audio_capture import AudioCapture
-    from roastcrowd.pipeline.asr import ASREngine
-    from roastcrowd.pipeline.llm import LLMEngine
-    from roastcrowd.pipeline.tts import OpenAITTSEngine
-    from roastcrowd.pipeline.audio_output import LaptopAudioOutput, NAOAudioOutput
+    from antagonist_robot.pipeline.audio_capture import AudioCapture
+    from antagonist_robot.pipeline.asr import ASREngine
+    from antagonist_robot.pipeline.llm import LLMEngine
+    from antagonist_robot.pipeline.tts import OpenAITTSEngine
+    from antagonist_robot.pipeline.audio_output import LaptopAudioOutput, NAOAudioOutput
 
     print(f"  Loading ASR model ({config.asr.model_size})...")
     capture = AudioCapture(config.audio)
@@ -68,8 +68,8 @@ def main():
     tts = OpenAITTSEngine(config.tts)
 
     # Audio output + NAO adapter
-    from roastcrowd.nao.simulated import SimulatedNAO
-    from roastcrowd.nao.real import RealNAO
+    from antagonist_robot.nao.simulated import SimulatedNAO
+    from antagonist_robot.nao.real import RealNAO
 
     if config.nao.mode == "real":
         print(f"  NAO: REAL mode ({config.nao.ip}:{config.nao.port})")
@@ -89,7 +89,7 @@ def main():
     nao_adapter.connect()
 
     # Logger
-    from roastcrowd.logging.session_logger import SessionLogger
+    from antagonist_robot.logging.session_logger import SessionLogger
 
     session_logger = SessionLogger(
         db_path=config.logging.db_path,
@@ -98,11 +98,11 @@ def main():
     )
 
     # AVCT manager
-    from roastcrowd.conversation.avct_manager import AvctManager
+    from antagonist_robot.conversation.avct_manager import AvctManager
     avct = AvctManager(config.avct)
 
     # Conversation manager
-    from roastcrowd.conversation.manager import ConversationManager
+    from antagonist_robot.conversation.manager import ConversationManager
 
     manager = ConversationManager(
         audio_capture=capture,
@@ -127,7 +127,7 @@ def main():
 def _run_web_mode(manager, tts, session_logger, config):
     """Start the FastAPI web server with uvicorn."""
     import uvicorn
-    from roastcrowd.ui.server import create_app
+    from antagonist_robot.ui.server import create_app
 
     static_dir = Path(__file__).parent / "webui" / "build"
     app = create_app(manager, tts, session_logger, static_dir)

@@ -1,4 +1,4 @@
-# RoastCrowd Configuration
+# Antagonistic Robot Configuration
 # All settings for the turn-based hostile voice conversation system.
 # API keys are read from environment variables (not stored here).
 
@@ -41,7 +41,7 @@ avct:
   prompts_dir: "prompts"
 
 logging:
-  db_path: "data/roastcrowd.db"
+  db_path: "data/Antagonistic Robot.db"
   audio_dir: "data/audio"
   save_audio: true
 

@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Antagonistic Robot</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #eee;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+
+  header {
+    background: #16213e;
+    padding: 16px 24px;
+    border-bottom: 1px solid #333;
+  }
+  header h1 { font-size: 20px; font-weight: 600; }
+  header h1 span { color: #e94560; }
+
+  .settings-panel {
+    background: #16213e;
+    padding: 16px 24px;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid #333;
+  }
+  .settings-panel label { font-size: 13px; color: #aaa; }
+  .settings-panel input[type="text"] {
+    background: #0f3460;
+    border: 1px solid #444;
+    color: #eee;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 150px;
+  }
+  .settings-panel select {
+    background: #0f3460;
+    border: 1px solid #444;
+    color: #eee;
+    padding: 6px 10px;
+    border-radius: 4px;
+    font-size: 14px;
+  }
+
+  .hostility-buttons {
+    display: flex;
+    gap: 4px;
+  }
+  .hostility-btn {
+    width: 36px;
+    height: 36px;
+    border: 2px solid #444;
+    border-radius: 6px;
+    background: #0f3460;
+    color: #eee;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .hostility-btn:hover { border-color: #e94560; }
+  .hostility-btn.active {
+    background: #e94560;
+    border-color: #e94560;
+    color: #fff;
+  }
+
+  .session-controls {
+    display: flex;
+    gap: 8px;
+    margin-left: auto;
+  }
+  .btn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .btn-start { background: #28a745; color: #fff; }
+  .btn-stop { background: #e94560; color: #fff; }
+  .btn-export { background: #0f3460; color: #eee; border: 1px solid #444; }
+
+  .status-bar {
+    background: #16213e;
+    padding: 10px 24px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    border-bottom: 1px solid #333;
+    font-size: 13px;
+  }
+  .status-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .status-dot.idle { background: #666; }
+  .status-dot.listening { background: #28a745; }
+  .status-dot.processing { background: #ffc107; }
+  .status-dot.speaking { background: #007bff; }
+
+  .conversation-log {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .turn-entry {
+    background: #16213e;
+    border-radius: 8px;
+    padding: 12px 16px;
+    border-left: 3px solid #e94560;
+  }
+  .turn-number {
+    font-size: 11px;
+    color: #666;
+    margin-bottom: 6px;
+  }
+  .user-text {
+    color: #82b1ff;
+    margin-bottom: 6px;
+    font-size: 14px;
+  }
+  .user-text::before { content: "User: "; font-weight: 600; }
+  .agent-text {
+    color: #e94560;
+    font-size: 14px;
+  }
+  .agent-text::before { content: "Agent: "; font-weight: 600; }
+
+  .latency-bar {
+    background: #16213e;
+    padding: 10px 24px;
+    border-top: 1px solid #333;
+    display: flex;
+    gap: 24px;
+    font-size: 12px;
+    color: #888;
+  }
+  .latency-item span { color: #eee; font-weight: 500; }
+
+  .empty-state {
+    color: #555;
+    text-align: center;
+    margin-top: 80px;
+    font-size: 15px;
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span>Roast</span>Crowd</h1>
+</header>
+
+<div class="settings-panel">
+  <div>
+    <label>Participant ID</label><br>
+    <input type="text" id="participantId" placeholder="e.g. P001">
+  </div>
+
+  <div>
+    <label>Hostility Level</label><br>
+    <div class="hostility-buttons">
+      <button class="hostility-btn" data-level="1" title="Dismissive">1</button>
+      <button class="hostility-btn" data-level="2" title="Sarcastic">2</button>
+      <button class="hostility-btn active" data-level="3" title="Confrontational">3</button>
+      <button class="hostility-btn" data-level="4" title="Hostile">4</button>
+      <button class="hostility-btn" data-level="5" title="Maximum">5</button>
+    </div>
+  </div>
+
+  <div>
+    <label>Voice</label><br>
+    <select id="voiceSelect"><option>Loading...</option></select>
+  </div>
+
+  <div class="session-controls">
+    <button class="btn btn-start" id="startBtn">Start Session</button>
+    <button class="btn btn-stop" id="stopBtn" disabled>End Session</button>
+    <button class="btn btn-export" id="exportBtn" disabled>Export</button>
+  </div>
+</div>
+
+<div class="status-bar">
+  <span class="status-dot idle" id="statusDot"></span>
+  <span id="statusText">Idle</span>
+  <span style="margin-left: auto;">
+    Turn: <span id="turnCount">0</span> |
+    Time: <span id="elapsedTime">0:00</span>
+  </span>
+</div>
+
+<div class="conversation-log" id="conversationLog">
+  <div class="empty-state" id="emptyState">
+    Start a session to begin the conversation.
+  </div>
+</div>
+
+<div class="latency-bar" id="latencyBar">
+  <div class="latency-item">VAD: <span id="latVad">--</span>ms</div>
+  <div class="latency-item">ASR: <span id="latAsr">--</span>ms</div>
+  <div class="latency-item">LLM: <span id="latLlm">--</span>ms</div>
+  <div class="latency-item">TTS: <span id="latTts">--</span>ms</div>
+  <div class="latency-item">Total: <span id="latTotal">--</span>ms</div>
+</div>
+
+<script>
+  // --- State ---
+  let selectedLevel = 3;
+  let sessionActive = false;
+  let currentSessionId = null;
+  let ws = null;
+  let statusPollInterval = null;
+
+  // --- DOM ---
+  const participantId = document.getElementById('participantId');
+  const voiceSelect = document.getElementById('voiceSelect');
+  const startBtn = document.getElementById('startBtn');
+  const stopBtn = document.getElementById('stopBtn');
+  const exportBtn = document.getElementById('exportBtn');
+  const statusDot = document.getElementById('statusDot');
+  const statusText = document.getElementById('statusText');
+  const turnCount = document.getElementById('turnCount');
+  const elapsedTime = document.getElementById('elapsedTime');
+  const conversationLog = document.getElementById('conversationLog');
+  const emptyState = document.getElementById('emptyState');
+
+  // --- Hostility Buttons ---
+  document.querySelectorAll('.hostility-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      selectedLevel = parseInt(btn.dataset.level);
+      document.querySelectorAll('.hostility-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      if (sessionActive) {
+        fetch('/api/settings', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ hostility_level: selectedLevel })
+        });
+      }
+    });
+  });
+
+  // --- Load Voices ---
+  async function loadVoices() {
+    try {
+      const res = await fetch('/api/voices');
+      const voices = await res.json();
+      voiceSelect.innerHTML = voices.map(v =>
+        `<option value="${v.name}">${v.name} (${v.gender})</option>`
+      ).join('');
+    } catch (e) {
+      voiceSelect.innerHTML = '<option>Error loading voices</option>';
+    }
+  }
+  loadVoices();
+
+  // --- Start Session ---
+  startBtn.addEventListener('click', async () => {
+    const pid = participantId.value.trim() || 'anonymous';
+    try {
+      const res = await fetch('/api/session/start', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ participant_id: pid, hostility_level: selectedLevel })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        sessionActive = true;
+        currentSessionId = data.session_id;
+        startBtn.disabled = true;
+        stopBtn.disabled = false;
+        exportBtn.disabled = true;
+        emptyState.style.display = 'none';
+        conversationLog.innerHTML = '';
+        connectWebSocket();
+        startStatusPoll();
+      } else {
+        alert(data.error || 'Failed to start session');
+      }
+    } catch (e) {
+      alert('Error starting session: ' + e.message);
+    }
+  });
+
+  // --- Stop Session ---
+  stopBtn.addEventListener('click', async () => {
+    try {
+      await fetch('/api/session/stop', { method: 'POST' });
+      sessionEnded();
+    } catch (e) {
+      alert('Error stopping session: ' + e.message);
+    }
+  });
+
+  function sessionEnded() {
+    sessionActive = false;
+    startBtn.disabled = false;
+    stopBtn.disabled = true;
+    exportBtn.disabled = false;
+    stopStatusPoll();
+    updateStatusUI('idle');
+  }
+
+  // --- Export ---
+  exportBtn.addEventListener('click', () => {
+    if (currentSessionId) {
+      window.open(`/api/sessions/${currentSessionId}/export`, '_blank');
+    }
+  });
+
+  // --- WebSocket ---
+  function connectWebSocket() {
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    ws = new WebSocket(`${protocol}//${window.location.host}/ws/conversation`);
+
+    ws.onmessage = (event) => {
+      const data = JSON.parse(event.data);
+
+      if (data.type === 'turn_complete') {
+        addTurn(data);
+        updateLatency(data.latency);
+        turnCount.textContent = data.turn_number;
+      } else if (data.type === 'state_change') {
+        updateStatusUI(data.state);
+        turnCount.textContent = data.turn_count;
+        updateElapsed(data.elapsed_seconds);
+      } else if (data.type === 'session_ended') {
+        sessionEnded();
+      } else if (data.type === 'error') {
+        addError(data.message);
+        sessionEnded();
+      }
+    };
+
+    ws.onclose = () => {
+      if (sessionActive) {
+        setTimeout(connectWebSocket, 2000);
+      }
+    };
+  }
+
+  // --- Status Polling ---
+  function startStatusPoll() {
+    statusPollInterval = setInterval(async () => {
+      try {
+        const res = await fetch('/api/status');
+        const data = await res.json();
+        updateStatusUI(data.state);
+        turnCount.textContent = data.turn_count;
+        updateElapsed(data.elapsed_seconds);
+      } catch (e) {}
+    }, 1000);
+  }
+
+  function stopStatusPoll() {
+    if (statusPollInterval) {
+      clearInterval(statusPollInterval);
+      statusPollInterval = null;
+    }
+  }
+
+  // --- UI Updates ---
+  function updateStatusUI(state) {
+    statusDot.className = 'status-dot ' + state;
+    const labels = { idle: 'Idle', listening: 'Listening...', processing: 'Processing...', speaking: 'Speaking...' };
+    statusText.textContent = labels[state] || state;
+  }
+
+  function updateElapsed(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = Math.floor(seconds % 60);
+    elapsedTime.textContent = `${m}:${s.toString().padStart(2, '0')}`;
+  }
+
+  function addTurn(data) {
+    const div = document.createElement('div');
+    div.className = 'turn-entry';
+    div.innerHTML = `
+      <div class="turn-number">Turn ${data.turn_number}</div>
+      <div class="user-text">${escapeHtml(data.transcript)}</div>
+      <div class="agent-text">${escapeHtml(data.response)}</div>
+    `;
+    conversationLog.appendChild(div);
+    conversationLog.scrollTop = conversationLog.scrollHeight;
+  }
+
+  function addError(message) {
+    const div = document.createElement('div');
+    div.className = 'turn-entry';
+    div.style.borderLeftColor = '#ffc107';
+    div.innerHTML = `<div style="color:#ffc107;">Error: ${escapeHtml(message)}</div>`;
+    conversationLog.appendChild(div);
+    conversationLog.scrollTop = conversationLog.scrollHeight;
+  }
+
+  function updateLatency(latency) {
+    if (!latency) return;
+    document.getElementById('latVad').textContent = latency.vad_ms ?? '--';
+    document.getElementById('latAsr').textContent = latency.asr_ms ?? '--';
+    document.getElementById('latLlm').textContent = latency.llm_ms ?? '--';
+    document.getElementById('latTts').textContent = latency.tts_ms ?? '--';
+    document.getElementById('latTotal').textContent = latency.total_ms ?? '--';
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+</script>
+</body>
+</html>

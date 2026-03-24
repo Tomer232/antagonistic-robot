@@ -2,12 +2,12 @@
 
 import pytest
 
-from roastcrowd.pipeline.audio_output import (
+from antagonist_robot.pipeline.audio_output import (
     AudioOutputBase,
     LaptopAudioOutput,
     NAOAudioOutput,
 )
-from roastcrowd.pipeline.types import TTSResult
+from antagonist_robot.pipeline.types import TTSResult
 
 
 class TestAudioOutputBase:

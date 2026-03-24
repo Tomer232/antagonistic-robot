@@ -2,8 +2,8 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from roastcrowd.config.settings import AvctConfig
-from roastcrowd.conversation.avct_manager import AvctManager
+from antagonist_robot.config.settings import AvctConfig
+from antagonist_robot.conversation.avct_manager import AvctManager
 
 def test_avct_safety():
     cfg = AvctConfig(prompts_dir="../prompts")
