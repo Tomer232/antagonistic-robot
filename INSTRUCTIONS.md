@@ -1,4 +1,4 @@
-# Antagonistic Robot (AVCT-LLM) — Build Instructions
+# Antagonistic Robot (AVCT-LLM) — Build and Architecture Guide
 
 > **Updated March 2026** — Reflects the AVCT-LLM Control Interface refactor.
 
@@ -21,7 +21,7 @@ NAO_LLM/
 ├── .env                         # API keys (GROK_API_KEY, OPENAI_API_KEY)
 ├── AVCT_v11.docx                # Original AVCT requirements document
 │
-├── Antagonistic Robot/                  # Main Python package
+├── antagonist_robot/                    # Main Python package
 │   ├── config/settings.py       # Loads & validates config.yaml
 │   ├── conversation/
 │   │   ├── avct_manager.py      # AVCT prompt assembly (7-slot system prompts)
@@ -136,7 +136,7 @@ Tests cover config loading, AVCT prompt generation, conversation history, sessio
 
 ## General Guidelines
 
-- All code uses type hints and docstrasses
+- All code uses type hints and docstrings
 - Dataclasses for all inter-component data types
 - Every class and public method has a docstring
 - Safety boundaries in prompts are **non-negotiable** and present in every prompt path
