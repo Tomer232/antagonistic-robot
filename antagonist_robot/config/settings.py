@@ -53,8 +53,8 @@ class TTSConfig:
 @dataclass
 class NAOConfig:
     """NAO robot connection settings."""
-    mode: str = "simulated"
-    ip: str = "169.254.178.111"
+    mode: str = "real"
+    ip: str = ""
     port: int = 9600
     naoqi_port: int = 9559
     password: str = "nao"

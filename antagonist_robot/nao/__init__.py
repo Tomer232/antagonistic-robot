@@ -1,1 +1,1 @@
-"""NAO robot adapter: simulated and real implementations."""
+"""NAO robot adapter for real NAO hardware."""

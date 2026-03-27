@@ -4,7 +4,6 @@ import pytest
 
 from antagonist_robot.pipeline.audio_output import (
     AudioOutputBase,
-    LaptopAudioOutput,
     NAOAudioOutput,
 )
 from antagonist_robot.pipeline.types import TTSResult
@@ -23,30 +22,6 @@ class TestAudioOutputBase:
         assert hasattr(AudioOutputBase, "play_audio")
         assert hasattr(AudioOutputBase, "speak_text")
         assert hasattr(AudioOutputBase, "stop")
-
-
-class TestLaptopAudioOutput:
-    """Tests for the laptop audio output."""
-
-    def test_speak_text_raises(self):
-        """LaptopAudioOutput.speak_text raises NotImplementedError."""
-        output = LaptopAudioOutput()
-        with pytest.raises(NotImplementedError):
-            output.speak_text("Hello")
-
-    def test_unsupported_format_raises(self):
-        """Playing an unsupported audio format raises ValueError."""
-        output = LaptopAudioOutput()
-        result = TTSResult(
-            audio_bytes=b"\x00",
-            format="ogg",  # unsupported
-            sample_rate=24000,
-            duration_seconds=1.0,
-            synthesis_time_seconds=0.1,
-            voice="test",
-        )
-        with pytest.raises(ValueError, match="Unsupported"):
-            output.play_audio(result)
 
 
 class TestNAOAudioOutput:

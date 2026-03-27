@@ -32,7 +32,7 @@ tts.setParameter("pitchShift", 0.9) # default 1.0, lower = deeper voice
 posture.goToPosture("StandInit", 0.5)
 
 # ------------------------------------------------------------------
-# Arm gesture helpers (mirrors nao_talk.py Webots controller poses)
+# Arm gesture helpers
 # Joint order: [RShoulderPitch, RShoulderRoll, RElbowYaw, RElbowRoll,
 #               LShoulderPitch, LShoulderRoll, LElbowYaw, LElbowRoll]
 # ------------------------------------------------------------------

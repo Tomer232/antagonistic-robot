@@ -30,7 +30,7 @@ def _minimal_config():
             "engine": "openai",
             "api_key_env": "TEST_TTS_KEY",
         },
-        "nao": {"mode": "simulated"},
+        "nao": {"mode": "real"},
         "hostility": {"default_level": 3, "prompts_dir": "prompts"},
         "logging": {"db_path": "data/test.db", "audio_dir": "data/audio"},
         "server": {"port": 8000},

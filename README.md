@@ -5,7 +5,7 @@
 
 > An AVCT-based voice conversation system for human-robot interaction research.
 
-Antagonistic Robot is a turn-based voice conversation system designed for HRI (Human-Robot Interaction) research. It uses the AVCT (Adaptive Voice Conversation Tuning) matrix to parametrically control an LLM's antagonistic behavior across four dimensions: polarity, behavioral category, intensity subtype, and behavioral modifiers. A human speaks into a microphone, the system transcribes their speech, generates a behaviorally-controlled response via LLM, converts it to speech, and plays it through either laptop speakers or a NAO robot. All sessions are logged to an SQLite database for post-experiment analysis. This system was developed for a ROMAN 2026 paper submission.
+Antagonistic Robot is a turn-based voice conversation system designed for HRI (Human-Robot Interaction) research. It uses the AVCT (Adaptive Voice Conversation Tuning) matrix to parametrically control an LLM's antagonistic behavior across four dimensions: polarity, behavioral category, intensity subtype, and behavioral modifiers. A participant speaks into the NAO robot's microphone, the system transcribes their speech, generates a behaviorally-controlled response via LLM, converts it to speech, and plays it through the NAO robot's speakers. All sessions are logged to an SQLite database for post-experiment analysis. This system was developed for a ROMAN 2026 paper submission.
 
 ## Architecture
 
@@ -17,7 +17,7 @@ Antagonistic Robot is a turn-based voice conversation system designed for HRI (H
                                   |
                                   | REST / WebSocket
                                   |
-Microphone --> VAD (Silero) --> ASR (faster-whisper) --> LLM (Grok 4 Fast) --> TTS (OpenAI) --> Speaker / NAO
+Microphone --> VAD (Silero) --> ASR (faster-whisper) --> LLM (Grok 4 Fast) --> TTS (OpenAI) --> NAO
                                                             ^
                                                             |
                                                      AVCT Matrix Control
@@ -84,7 +84,7 @@ All LLM prompts include mandatory, non-removable safety boundaries. These are en
 - An OpenAI API key (for TTS)
 - A working microphone
 - (Optional) Node.js 18+ to rebuild the web UI from source
-- (Optional) A NAO robot with `nao_speaker_server.py` deployed
+- A NAO robot with `nao_speaker_server.py` deployed
 
 ## Quick Start
 
@@ -159,8 +159,8 @@ Available voices: alloy, echo, fable, onyx, nova, shimmer, coral, verse, ballad,
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `mode` | `simulated` | `simulated` (laptop only) or `real` (NAO robot) |
-| `ip` | `169.254.178.111` | NAO robot IP address |
+| `mode` | `real` | Operating mode (always `real`) |
+| `ip` | *(none)* | NAO robot IP address — must be set by the user |
 | `port` | 9600 | TCP port for `nao_speaker_server.py` |
 | `naoqi_port` | 9559 | NAOqi SDK port |
 | `use_builtin_tts` | `true` | Use NAO's built-in TTS vs local TTS |
@@ -209,7 +209,7 @@ npm run build
 ```yaml
 nao:
   mode: "real"
-  ip: "169.254.178.111"  # your robot's IP
+  ip: "<your-robot-ip>"  # your NAO's IP address
   port: 9600
   use_builtin_tts: true  # use NAO's built-in TTS for lower latency
 ```
@@ -252,7 +252,7 @@ antagonistic-robot/
 │   │   └── manager.py               # ConversationManager (turn orchestration)
 │   ├── pipeline/
 │   │   ├── audio_capture.py         # Microphone input with Silero VAD
-│   │   ├── audio_output.py          # Laptop / NAO audio playback
+│   │   ├── audio_output.py          # NAO audio playback
 │   │   ├── asr.py                   # faster-whisper speech recognition
 │   │   ├── llm.py                   # OpenAI-compatible LLM client
 │   │   ├── tts.py                   # OpenAI TTS (gpt-4o-mini-tts)
@@ -261,8 +261,7 @@ antagonistic-robot/
 │   │   └── session_logger.py        # SQLite session and turn logging
 │   ├── nao/
 │   │   ├── base.py                  # Abstract NAO adapter interface
-│   │   ├── simulated.py             # Console-based simulation (dev mode)
-│   │   └── real.py                  # Real NAO via naoqi SDK
+│   │   └── real.py                  # Real NAO adapter (TCP)
 │   └── ui/
 │       ├── server.py                # FastAPI REST API + WebSocket server
 │       └── static/

@@ -27,8 +27,8 @@ tts:
   api_key_env: "OPENAI_API_KEY"
 
 nao:
-  mode: "simulated"        # "simulated" or "real"
-  ip: "169.254.178.111"
+  mode: "real"
+  ip: "YOUR_NAO_IP"    # Replace with your NAO robot's IP address
   port: 9600
   naoqi_port: 9559
   password: "nao"

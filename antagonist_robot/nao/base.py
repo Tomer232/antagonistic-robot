@@ -1,8 +1,8 @@
 """Abstract NAO adapter base class.
 
-Defines the interface for interacting with the NAO robot
-(or a simulated version for development). The conversation manager
-calls these methods at specific points in the turn lifecycle.
+Defines the interface for interacting with the NAO robot.
+The conversation manager calls these methods at specific points
+in the turn lifecycle.
 """
 
 from abc import ABC, abstractmethod

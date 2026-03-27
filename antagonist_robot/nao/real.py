@@ -1,64 +1,77 @@
-"""Real NAO adapter stub for future implementation.
+"""Real NAO adapter — communicates with the robot via TCP.
 
-Requires the naoqi Python SDK which is only available on systems
-with NAO developer tools installed. All methods currently raise
-NotImplementedError.
+The PC does NOT use the naoqi SDK directly. All robot interaction
+(TTS, gestures) is handled by nao_speaker_server.py running on the
+NAO robot. This adapter verifies reachability and logs state
+transitions; gesture control is managed server-side.
 """
+
+import logging
+import socket
 
 from antagonist_robot.nao.base import NAOAdapter
 
+logger = logging.getLogger(__name__)
+
 
 class RealNAO(NAOAdapter):
-    """Real NAO robot adapter. Requires naoqi SDK.
+    """Real NAO robot adapter via TCP to nao_speaker_server.py.
 
-    Future implementation should:
-    - Connect to NAO via naoqi ALProxy
-    - Use ALMotion for gesture control (setAngles)
-    - Use ALRobotPosture for posture management
-    - Map hostility levels to gesture intensity
-    - Reference nao_speaker_server.py for arm angle constants
+    The adapter verifies that the robot is reachable on the speaker
+    server port (default 9600) during connect(). Gesture and posture
+    control is handled entirely by nao_speaker_server.py on the robot.
     """
 
     def __init__(self, ip: str, naoqi_port: int = 9559, password: str = "nao"):
         self._ip = ip
         self._port = naoqi_port
         self._password = password
+        self._connected = False
 
     def connect(self) -> None:
-        """Connect to NAO via naoqi ALProxy.
+        """Verify the robot is reachable by TCP-pinging the speaker server port.
 
-        Would create proxies for ALMotion, ALRobotPosture, etc.
+        Attempts a TCP connection to ip:9600 (the nao_speaker_server.py
+        port). If the connection succeeds, the robot is considered reachable.
         """
-        raise NotImplementedError(
-            "RealNAO requires the naoqi Python SDK. "
-            "Install it from Aldebaran's developer portal."
-        )
+        speaker_port = 9600
+        try:
+            with socket.create_connection(
+                (self._ip, speaker_port), timeout=5
+            ):
+                pass  # Connection succeeded — robot is reachable
+            self._connected = True
+            logger.info(
+                "[RealNAO] Connected — robot reachable at %s:%d",
+                self._ip, speaker_port,
+            )
+        except OSError as exc:
+            self._connected = False
+            logger.warning(
+                "[RealNAO] Cannot reach robot at %s:%d — %s",
+                self._ip, speaker_port, exc,
+            )
 
     def disconnect(self) -> None:
-        """Disconnect from NAO and release resources."""
-        raise NotImplementedError("naoqi SDK required")
+        """Mark as disconnected and log."""
+        self._connected = False
+        logger.info("[RealNAO] Disconnected")
 
     def on_response(self, text: str, hostility_level: int) -> None:
-        """Trigger appropriate gestures via ALMotion.setAngles().
-
-        Higher hostility levels should produce more emphatic arm
-        movements. Reference the ANGLES_SPEAKING constants in
-        nao_speaker_server.py for angle ranges.
-        """
-        raise NotImplementedError("naoqi SDK required")
+        """Log the polar level. Gestures are handled by nao_speaker_server.py."""
+        logger.info(
+            "[RealNAO] on_response: polar level %d (gestures handled server-side)",
+            hostility_level,
+        )
 
     def on_listening(self) -> None:
-        """Set listening posture via ALMotion.setAngles().
-
-        Should move the right hand near ear (ANGLES_LISTENING)
-        and keep the left arm relaxed.
-        """
-        raise NotImplementedError("naoqi SDK required")
+        """Log that the system entered listening state."""
+        logger.info("[RealNAO] on_listening: waiting for user speech")
 
     def on_idle(self) -> None:
-        """Return to neutral via ALRobotPosture.goToPosture("StandInit", 0.5)."""
-        raise NotImplementedError("naoqi SDK required")
+        """Log that the system entered idle state."""
+        logger.info("[RealNAO] on_idle: session idle")
 
     def is_connected(self) -> bool:
-        """Always returns False since connection is not implemented."""
-        return False
+        """Return True if the robot was reachable at last connect() call."""
+        return self._connected

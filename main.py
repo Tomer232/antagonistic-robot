@@ -55,7 +55,7 @@ def main():
     from antagonist_robot.pipeline.asr import ASREngine
     from antagonist_robot.pipeline.llm import LLMEngine
     from antagonist_robot.pipeline.tts import OpenAITTSEngine
-    from antagonist_robot.pipeline.audio_output import LaptopAudioOutput, NAOAudioOutput
+    from antagonist_robot.pipeline.audio_output import NAOAudioOutput
 
     print(f"  Loading ASR model ({config.asr.model_size})...")
     capture = AudioCapture(config.audio)
@@ -68,23 +68,17 @@ def main():
     tts = OpenAITTSEngine(config.tts)
 
     # Audio output + NAO adapter
-    from antagonist_robot.nao.simulated import SimulatedNAO
     from antagonist_robot.nao.real import RealNAO
 
-    if config.nao.mode == "real":
-        print(f"  NAO: REAL mode ({config.nao.ip}:{config.nao.port})")
-        audio_output = NAOAudioOutput(
-            ip=config.nao.ip,
-            port=config.nao.port,
-            use_builtin_tts=config.nao.use_builtin_tts,
-        )
-        nao_adapter = RealNAO(
-            config.nao.ip, config.nao.naoqi_port, config.nao.password
-        )
-    else:
-        print("  NAO: SIMULATED mode")
-        audio_output = LaptopAudioOutput()
-        nao_adapter = SimulatedNAO()
+    print(f"  NAO: {config.nao.ip}:{config.nao.port}")
+    audio_output = NAOAudioOutput(
+        ip=config.nao.ip,
+        port=config.nao.port,
+        use_builtin_tts=config.nao.use_builtin_tts,
+    )
+    nao_adapter = RealNAO(
+        config.nao.ip, config.nao.naoqi_port, config.nao.password
+    )
 
     nao_adapter.connect()
 

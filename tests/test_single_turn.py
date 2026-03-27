@@ -22,7 +22,7 @@ from antagonist_robot.pipeline.audio_capture import AudioCapture
 from antagonist_robot.pipeline.asr import ASREngine
 from antagonist_robot.pipeline.llm import LLMEngine
 from antagonist_robot.pipeline.tts import OpenAITTSEngine
-from antagonist_robot.pipeline.audio_output import LaptopAudioOutput
+from antagonist_robot.pipeline.audio_output import NAOAudioOutput
 
 
 def main():
@@ -34,7 +34,11 @@ def main():
     asr = ASREngine(config.asr)
     llm = LLMEngine(config.llm)
     tts = OpenAITTSEngine(config.tts)
-    output = LaptopAudioOutput()
+    output = NAOAudioOutput(
+        ip=config.nao.ip,
+        port=config.nao.port,
+        use_builtin_tts=config.nao.use_builtin_tts,
+    )
 
     test_prompt = (
         "You are a rude and dismissive assistant. "
@@ -71,7 +75,10 @@ def main():
 
     # 5. Playback
     t4 = time.monotonic()
-    output.play_audio(tts_result)
+    if output.use_builtin_tts:
+        output.speak_text(llm_result.text)
+    else:
+        output.play_audio(tts_result)
     play_ms = round((time.monotonic() - t4) * 1000)
     print(f"  [PLAY] {play_ms}ms")
 

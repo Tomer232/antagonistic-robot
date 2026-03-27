@@ -1,15 +1,11 @@
-"""Audio output routing with pluggable backends.
+"""Audio output routing to the NAO robot via TCP.
 
-LaptopAudioOutput: plays through laptop speakers using pyaudio.
-NAOAudioOutput: routes audio to NAO robot via TCP (nao_speaker_server.py).
+NAOAudioOutput: routes audio to NAO robot via nao_speaker_server.py.
 """
 
 import socket
 import time
 from abc import ABC, abstractmethod
-
-import numpy as np
-import pyaudio
 
 from antagonist_robot.pipeline.types import TTSResult
 
@@ -31,52 +27,6 @@ class AudioOutputBase(ABC):
     def stop(self) -> None:
         """Immediately halt playback."""
         ...
-
-
-class LaptopAudioOutput(AudioOutputBase):
-    """Plays audio through laptop speakers using pyaudio.
-
-    Handles raw PCM audio from OpenAI TTS (24kHz, 16-bit, mono).
-    """
-
-    def __init__(self):
-        self._pa = pyaudio.PyAudio()
-        self._stream = None
-
-    def play_audio(self, tts_result: TTSResult) -> None:
-        """Play PCM audio through laptop speakers. Blocks until done."""
-        if tts_result.format == "pcm":
-            stream = self._pa.open(
-                format=pyaudio.paInt16,
-                channels=1,
-                rate=tts_result.sample_rate,
-                output=True,
-            )
-            try:
-                self._stream = stream
-                # Write audio in chunks for responsive stop()
-                chunk_size = 4096
-                data = tts_result.audio_bytes
-                for i in range(0, len(data), chunk_size):
-                    if self._stream is None:
-                        break  # stop() was called
-                    stream.write(data[i:i + chunk_size])
-            finally:
-                stream.stop_stream()
-                stream.close()
-                self._stream = None
-        else:
-            raise ValueError(f"Unsupported audio format: {tts_result.format}")
-
-    def speak_text(self, text: str) -> None:
-        """Not supported for laptop output — always use play_audio."""
-        raise NotImplementedError(
-            "Laptop output requires pre-synthesized audio. Use play_audio()."
-        )
-
-    def stop(self) -> None:
-        """Stop playback immediately."""
-        self._stream = None
 
 
 class NAOAudioOutput(AudioOutputBase):

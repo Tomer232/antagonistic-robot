@@ -4,7 +4,7 @@
 
 ## What This System Is
 
-Antagonistic Robot is a turn-based voice conversation system for HRI (Human-Robot Interaction) research. A human speaks into a laptop microphone, the system transcribes their speech, sends it to an LLM (Grok 4 Fast) that responds with behavior controlled by the **AVCT matrix**, converts the response to speech (OpenAI TTS), and plays it through either laptop speakers (simulation mode) or NAO robot speakers (real mode).
+Antagonistic Robot is a turn-based voice conversation system for HRI (Human-Robot Interaction) research. A participant speaks into the NAO robot's microphone, the system transcribes their speech, sends it to an LLM (Grok 4 Fast) that responds with behavior controlled by the **AVCT matrix**, converts the response to speech (OpenAI TTS), and plays it through the NAO robot's speakers.
 
 The AVCT matrix replaces the old 1-5 hostility scale with a multi-dimensional parametric control system.
 
@@ -29,7 +29,7 @@ NAO_LLM/
 │   │   └── manager.py           # ConversationManager — orchestrates each turn
 │   ├── pipeline/
 │   │   ├── audio_capture.py     # Microphone input with Silero VAD
-│   │   ├── audio_output.py      # Laptop / NAO audio playback
+│   │   ├── audio_output.py      # NAO audio playback
 │   │   ├── asr.py               # faster-whisper speech recognition
 │   │   ├── llm.py               # OpenAI-compatible LLM client (Grok)
 │   │   ├── tts.py               # OpenAI TTS (gpt-4o-mini-tts)
@@ -37,8 +37,7 @@ NAO_LLM/
 │   ├── logging/session_logger.py # SQLite session & turn logging
 │   ├── nao/
 │   │   ├── base.py              # Abstract NAO adapter interface
-│   │   ├── simulated.py         # Logs gestures to console (dev mode)
-│   │   └── real.py              # Real NAO via naoqi SDK (stub)
+│   │   └── real.py              # Real NAO adapter (TCP)
 │   └── ui/server.py             # FastAPI REST API + WebSocket server
 │
 ├── webui/                       # React frontend
@@ -119,7 +118,7 @@ The web UI is accessible at `http://localhost:8000`.
 | `llm` | `model: grok-4-fast`, `base_url: https://api.x.ai/v1`, `max_tokens: 256`, `temperature: 0.9` |
 | `tts` | `engine: openai`, `model: gpt-4o-mini-tts`, `default_voice: onyx` |
 | `audio` | `sample_rate: 16000`, `silence_threshold_ms: 700` |
-| `nao` | `mode: simulated` or `real`, `ip`, `port` |
+| `nao` | `mode: real`, `ip`, `port` |
 | `avct` | `default_polar_level: 2`, `default_category: D`, `default_subtype: 2` |
 
 ---
