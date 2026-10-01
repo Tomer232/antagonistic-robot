@@ -1,0 +1,152 @@
+"""Shared fixtures: fake pipeline components and a mock robot on a free port.
+
+The tests never call a real LLM, microphone, or robot. The mock robot is
+the real nao_speaker_server.py running with tools/fake_naoqi.
+"""
+
+import os
+import re
+import socket
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+import pytest
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from antagonist_robot.config.settings import AvctConfig, OperatorConfig  # noqa: E402
+from antagonist_robot.conversation.avct_manager import AvctManager  # noqa: E402
+from antagonist_robot.conversation.manager import ConversationManager  # noqa: E402
+from antagonist_robot.conversation.operator import OperatorGate  # noqa: E402
+from antagonist_robot.logging.session_logger import SessionLogger  # noqa: E402
+from antagonist_robot.nao.base import NAOAdapter  # noqa: E402
+from antagonist_robot.pipeline.audio_output import NAOAudioOutput  # noqa: E402
+from antagonist_robot.robots.nao import NaoBackend  # noqa: E402
+from antagonist_robot.pipeline.scripted_input import ScriptedParticipant  # noqa: E402
+from antagonist_robot.pipeline.types import LLMResult  # noqa: E402
+
+_POLAR = re.compile(r"Operate at polar level (-?\d)")
+
+
+class FakeLLM:
+    """Returns a scripted response per call; the text reports the polar level it was asked for."""
+
+    def __init__(self, texts=None):
+        self.texts = list(texts or [])
+        self.calls = []
+
+    def generate(self, system_prompt, messages):
+        polar = int(_POLAR.search(system_prompt).group(1))
+        self.calls.append({"system_prompt": system_prompt, "messages": messages, "polar": polar})
+        text = self.texts.pop(0) if self.texts else f"Reply at polar {polar}."
+        return LLMResult(text=text, model="fake-llm", total_tokens=10, generation_time_seconds=0.0,
+                         reasoning=f"reasoning for polar {polar}")
+
+
+class NullNAO(NAOAdapter):
+    def connect(self): pass
+    def disconnect(self): pass
+    def on_response(self, text, hostility_level): pass
+    def on_listening(self): pass
+    def on_idle(self): pass
+    def is_connected(self): return True
+
+
+def _free_port() -> int:
+    """A random port outside the OS dynamic range (49152-65535 on Windows), where other
+    programs' outgoing connections can grab a port between our check and the mock's bind."""
+    import random
+    return random.randrange(20000, 40000, 2)
+
+
+@pytest.fixture(scope="session")
+def mock_mic_wav(tmp_path_factory):
+    """A 16 kHz mono WAV the mock robot's microphone 'hears': a 2 s sweep with a known waveform."""
+    import wave
+    import numpy as np
+    path = tmp_path_factory.mktemp("mic") / "mic.wav"
+    t = np.arange(32000) / 16000
+    samples = (0.3 * np.sin(2 * np.pi * (200 + 300 * t) * t) * 32767).astype("<i2")
+    with wave.open(str(path), "wb") as w:
+        w.setnchannels(1)
+        w.setsampwidth(2)
+        w.setframerate(16000)
+        w.writeframes(samples.tobytes())
+    return path, samples
+
+
+@pytest.fixture(scope="session")
+def mock_robot(mock_mic_wav):
+    """Start tools/mock_nao.py on free ports (speech: port, microphone: port + 1); yield (ip, port).
+
+    Windows can refuse a port on 0.0.0.0 that looked free on 127.0.0.1 (reserved
+    ranges), so ports are checked on 0.0.0.0 and the start is retried on new
+    ports if the mock exits.
+    """
+    env = {**os.environ, "RAWR_FAKE_MIC_WAV": str(mock_mic_wav[0])}
+    log = str(mock_mic_wav[0]) + ".mock.log"
+    for _attempt in range(10):
+        port = _free_port()
+        try:
+            for p in (port, port + 1):
+                with socket.socket() as s:
+                    s.bind(("0.0.0.0", p))
+        except OSError:
+            continue
+        # output to a file: an unread pipe would eventually block the mock robot
+        proc = subprocess.Popen(
+            [sys.executable, str(ROOT / "tools" / "mock_nao.py"), "--port", str(port)],
+            stdout=subprocess.DEVNULL, stderr=open(log, "w"), cwd=str(ROOT), env=env,
+        )
+        out = NAOAudioOutput("127.0.0.1", port)
+        deadline = time.monotonic() + 20
+        while time.monotonic() < deadline and proc.poll() is None:
+            if out.ping():
+                break
+            time.sleep(0.05)
+        if proc.poll() is None and out.ping():
+            break
+        proc.kill()
+    else:
+        raise RuntimeError(f"mock robot did not start (see {log})")
+    yield "127.0.0.1", port
+    proc.terminate()
+    proc.wait(timeout=5)
+
+
+@pytest.fixture
+def make_manager(tmp_path, mock_robot):
+    """Factory for a ConversationManager wired to fakes and the mock robot."""
+
+    def _make(utterances, llm_texts=None, review_mode="timed", hold_seconds=0.2, block_at="Orange", monitor=None,
+              fidelity=None, robot=None):
+        ip, port = mock_robot
+        logger = SessionLogger(str(tmp_path / "test.db"), str(tmp_path / "audio"))
+        participant = ScriptedParticipant(utterances, delay_s=0.0)
+        llm = FakeLLM(llm_texts)
+        gate = OperatorGate(OperatorConfig(review_mode=review_mode, hold_seconds=hold_seconds,
+                                           block_auto_send_at=block_at))
+        manager = ConversationManager(
+            audio_capture=participant, asr=participant, llm=llm,
+            robot=robot or NaoBackend(ip, port), avct_manager=AvctManager(AvctConfig()),
+            session_logger=logger, gate=gate, monitor=monitor, fidelity=fidelity,
+        )
+        events = []
+        manager.on_event = events.append
+        return manager, llm, logger, events
+
+    return _make
+
+
+def wait_for(predicate, timeout=5.0):
+    """Poll until predicate() is truthy."""
+    end = time.monotonic() + timeout
+    while time.monotonic() < end:
+        value = predicate()
+        if value:
+            return value
+        time.sleep(0.02)
+    raise AssertionError("condition not met in time")
