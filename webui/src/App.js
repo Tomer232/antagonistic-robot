@@ -1,6 +1,13 @@
 import React, { useState, useEffect } from "react";
 
-const API_BASE = "http://127.0.0.1:8000";
+// The backend serves this page, so talk to whatever address it came from:
+// robot-hub runs it on 9100, not 8000 (2026-10-05). The React dev server
+// (port 3000) has no backend behind it, so that alone uses the old default.
+const DEV_SERVER = window.location.port === "3000";
+const API_BASE = DEV_SERVER ? "http://127.0.0.1:8000" : window.location.origin;
+const WS_BASE = DEV_SERVER
+  ? "ws://127.0.0.1:8000"
+  : `${window.location.protocol === "https:" ? "wss" : "ws"}://${window.location.host}`;
 
 function App() {
   const [status, setStatus] = useState("listening");
@@ -34,7 +41,7 @@ function App() {
 
   // WebSocket
   useEffect(() => {
-    let ws = new WebSocket(`ws://127.0.0.1:8000/ws/conversation`);
+    let ws = new WebSocket(`${WS_BASE}/ws/conversation`);
     ws.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.type === "turn_complete") {

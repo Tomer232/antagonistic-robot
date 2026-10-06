@@ -42,20 +42,22 @@ tts     = make_proxy("ALTextToSpeech")
 motion  = make_proxy("ALMotion")
 posture = make_proxy("ALRobotPosture")
 
-# Autonomous Life fights manual arm commands (and after a fall it sits in
-# 'safeguard', where goToPosture will not take). Disable it, then wake up.
+# Autonomous Life fights manual arm commands, and left on it wakes the robot
+# up by itself. Disable it.
 try:
     make_proxy("ALAutonomousLife").setState("disabled")
 except Exception as e:
     print("[NAO SERVER] Could not disable Autonomous Life:", e)
-motion.wakeUp()
 
 # Slow down and lower the pitch so the robot sounds more natural
 tts.setParameter("speed", 85)       # default 100, range ~50-200
 tts.setParameter("pitchShift", 0.9) # default 1.0, lower = deeper voice
 
-# Stand up when the server starts
-posture.goToPosture("StandInit", 0.5)
+# The server no longer wakes the motors or stands the robot up (2026-10-05:
+# NAO overheated -- right hip at 92 C -- after standing through a session).
+# It talks seated with the motors off. The arm gestures below run only if the
+# robot was already woken up some other way (e.g. naoqi/stand.py).
+print("[NAO SERVER] Motors awake: %s (posture left as it is)" % motion.robotIsWakeUp())
 
 # ------------------------------------------------------------------
 # Arm gesture helpers
@@ -97,8 +99,13 @@ ANGLES_NEUTRAL = [0.0] * 8
 
 
 def set_arms(angles, speed=0.15):
-    """Move arm joints to the given angles at the given fractional speed (0-1)."""
+    """Move arm joints to the given angles at the given fractional speed (0-1).
+
+    Does nothing while the motors are off, so a resting robot is never moved.
+    """
     try:
+        if not motion.robotIsWakeUp():
+            return
         motion.setAngles(JOINT_NAMES, angles, speed)
     except Exception as e:
         print("[NAO SERVER] motion.setAngles error:", e)

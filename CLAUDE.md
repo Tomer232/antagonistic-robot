@@ -27,7 +27,7 @@ python main.py             # web UI on http://localhost:8000
 ## Known traps
 
 - **NAOqi port opens before the broker is ready.** Right after boot, `ALProxy(...)` can fail with `ALBroker::createBroker Cannot connect` on a healthy robot. It is a retry, not a dead robot. The speaker server retries 10 times, 2 s apart.
-- **Autonomous Life fights manual motion.** After a fall NAO sits in `safeguard` and `goToPosture` won't take. The sequence that works: `ALAutonomousLife.setState("disabled")` → `ALMotion.wakeUp()` → `goToPosture(...)`. The speaker server does this at startup.
+- **Autonomous Life fights manual motion.** After a fall NAO sits in `safeguard` and `goToPosture` won't take. The sequence that works: `ALAutonomousLife.setState("disabled")` → `ALMotion.wakeUp()` → `goToPosture(...)`. The speaker server only disables Autonomous Life: since 2026-10-05 it no longer wakes the motors or stands the robot (NAO overheated standing through a session), so it talks seated with motors off, and arm gestures run only if the robot is already awake.
 - **`naoqi` import over SSH.** `deploy_nao.py` starts the server through `bash -lc` and first checks `import naoqi`; if that fails it retries with `PYTHONPATH=/opt/aldebaran/lib/python2.7/site-packages`, then any `--pythonpath` given. If all fail, find the module on the robot with `find / -name naoqi.py 2>/dev/null`.
 - **Check Point VPN on the lab laptop** hooks outbound connections on port 80, so port-80 scans report hosts that don't exist. Ports 22 / 9559 / 9600 are not affected.
 - A robot reboot kills the speaker server; rerun `deploy_nao.py`.

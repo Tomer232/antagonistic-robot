@@ -38,3 +38,6 @@ conversation_log.jsonl
 # OS files
 Thumbs.db
 .DS_Store
+
+# Written by the Robot Hub at Launch (robot address)
+config.hub-generated.yaml
